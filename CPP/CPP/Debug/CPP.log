@@ -1,0 +1,3 @@
+﻿  CPP.cpp
+D:\joshuab\Projects\Coding\Misc\CPP\CPP\CPP.cpp(220): warning C4715: 'first_non_recurring': not all control paths return a value
+  CPP.vcxproj -> D:\joshuab\Projects\Coding\Misc\CPP\Debug\CPP.exe
