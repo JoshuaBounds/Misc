@@ -1,9 +1,19 @@
+"""
+Objects for creating and editing node networks.
+"""
+
+
 from typing import *
+
+
+__all__ = (
+    'Node'
+)
 
 
 class Node:
     """
-    Base node for node graphing operations.
+    Base node for building node networks.
     """
 
     data: Any = None
@@ -156,6 +166,64 @@ class Node:
             or self * self.__class__(data)
         )
 
+    def create_two_way_connections(self, *nodes: 'Node') -> List['Node']:
+        """
+        Creates two way connections between neighbouring nodes in the
+        given sequence.
+        Equivalent to [ Node * Node * ... ].
+        :return:
+            All nodes connected.
+        """
+        previous_node = self
+        result = [self]
+        for node in nodes:
+            previous_node = previous_node * node
+            result.append(node)
+        return result
+
+    def create_two_way_connections_all(self, *nodes: 'Node') -> List['Node']:
+        """
+        Creates two way connections between every node in the given
+        sequence.
+        :return:
+            All nodes connected.
+        """
+        connected_nodes = [self]
+        for node in nodes:
+            connected_nodes ** node
+            connected_nodes.append(node)
+        return connected_nodes
+
+    def create_one_way_connections_left(self, *nodes: 'Node') -> List['Node']:
+        """
+        Creates one way connections between neighbouring nodes in the
+        given sequence.
+        Equivalent to: [ Node < Node < ... ]
+        :return:
+            All nodes connected.
+        """
+        previous_node = self
+        result = [self]
+        for node in nodes:
+            previous_node = previous_node < node
+            result.append(node)
+        return result
+
+    def create_one_way_connections_right(self, *nodes: 'Node') -> List['Node']:
+        """
+        Creates one way connections between neighbouring nodes in the
+        given sequence.
+        Equivalent to: [ Node > Node > ... ]
+        :return:
+            All nodes connected.
+        """
+        previous_node = self
+        result = [self]
+        for node in nodes:
+            previous_node = previous_node > node
+            result.append(node)
+        return result
+
     def generate_spread_levels(self) -> List[Set]:
         """
         :return:
@@ -181,6 +249,15 @@ class Node:
 if __name__ == '__main__':
 
     a = Node('A')
-    b = a('B')
-    c = b('C')
-    print(b.generate_spread_levels())
+    b = Node('B')
+    c = Node('C')
+
+    print(a.connections)
+    print(b.connections)
+    print(c.connections)
+
+    Node.create_one_way_connections_right(a, b, c)
+
+    print(a, a.connections)
+    print(b, b.connections)
+    print(c, c.connections)
