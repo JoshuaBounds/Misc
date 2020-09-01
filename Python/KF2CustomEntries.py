@@ -74,7 +74,7 @@ def get_custom_maps(path: AnyStr) -> List[AnyStr]:
 
         # Gets the full file path.
         # Continues if the path is not actually a file.
-        file_path = os.path.join(custom_directory, file_name)
+        file_path = os.path.join(path, file_name)
         if not os.path.isfile(file_path):
             continue
 
