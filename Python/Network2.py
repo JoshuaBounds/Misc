@@ -1,4 +1,7 @@
 
+from random import randint
+
+
 """
 Node syntax:
 
@@ -185,19 +188,78 @@ class Node:
 
         return recurse({self})
 
+    @classmethod
+    def random_network(
+            cls,
+            size,
+            weight_sub=1.0,
+            weight_add=1.0,
+            weight_or=1.0,
+            weight_mul=1.0
+    ):
+        """
+        Generates a random node network.
+
+        Weight args can be used to alter the frequency of specified
+        connection types. Each weight is a ratio between itself and the
+        sum of all weights combined (then expressed as a percent).
+        ex: chance = (100 // total_weight) * weight
+        :param size:
+            Number of nodes in the network (excluding the root node).
+        :param weight_sub:
+            Weight value for the SUB (-) operator.
+        :param weight_add:
+            Weight value for the ADD (+) operator.
+        :param weight_or:
+            Weight value for the OR (|) operator.
+        :param weight_mul:
+            Weight value for the MUL (*) operator.
+        :return:
+            Tuple of nodes with randomized connections between them.
+        """
+
+        # Creates a series of ranges for each connection type
+        # on a 1-100 scale.
+        # c_mul is only used when calculating to total; it's range is
+        # whatever remains after the first three ranges are determined.
+        fraction = 100 / (weight_sub + weight_add + weight_or + weight_mul)
+        sub_range = fraction * weight_sub
+        add_range = fraction * weight_add + sub_range
+        or_range = fraction * weight_or + add_range
+
+        # Creates network by rolling a number between 1-100, and using
+        # the operation of whatever range the number lays within.
+        network = cls('root')
+        for i in range(size):
+
+            r = randint(1, 100)
+            if r < sub_range:
+                network = network - cls(i)
+            elif sub_range <= r < add_range:
+                network = network + cls(i)
+            elif add_range <= r < or_range:
+                network = network | cls(i)
+            else:
+                network = network * cls(i)
+
+        return network
+
 
 if __name__ == '__main__':
 
-    N = Node
+    for n in Node.random_network(10)[0].get_network():
+        print(n, n.connections)
 
-    a, b, c, d = N('A') - N('B') - N('C') - N('D')
+    # N = Node
+    #
+    # a, b, c, d = N('A') - N('B') - N('C') - N('D')
 
     # for n in a.get_network_propagation():
     #     print(n)
-
+    #
     # for n in a.get_network():
     #     print(n, n.connections)
-
+    #
     # for n in N('A')-N('B')-N('C'):
     #     print(n, n.connections)
     #
