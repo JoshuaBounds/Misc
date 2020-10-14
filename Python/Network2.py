@@ -165,12 +165,30 @@ class Node:
             Set of all nodes in the network.
         """
 
-        def recurse(cl, _a=set()):
-            _a |= cl
-            nl = {c for n in cl for c in n.connections} - _a
-            return recurse(nl) if nl else _a
+        def recurse(current_level, collector):
 
-        return recurse({self})
+            # Updates the collector with all nodes from this level.
+            collector |= current_level
+
+            # Get's all unique nodes in the current level's connections.
+            # These will act as the nodes for the next level.
+            next_level = (
+                {
+                    connection
+                    for node in current_level
+                    for connection in node.connections
+                }
+                - collector
+            )
+
+            # Returns the recursion or the collector depending on
+            # whether any more unique nodes are found in this levels
+            # connections.
+            return recurse(next_level, collector) if next_level else collector
+
+        # Starts the recursion by providing a starting level, and a
+        # set to act as a collector.
+        return recurse({self}, set())
 
     def get_network_propagation(self):
         """
@@ -181,12 +199,33 @@ class Node:
              level moving away from self.
         """
 
-        def recurse(cl, _a=set()):
-            _a |= cl
-            nl = {c for n in cl for c in n.connections} - _a
-            return (cl,) + recurse(nl) if nl else (cl,)
+        def recurse(current_level, collector):
 
-        return recurse({self})
+            # Updates the collector with all nodes from this level.
+            collector |= current_level
+
+            # Get's all unique nodes in the current level's connections.
+            # These will act as the nodes for the next level.
+            next_level = (
+                {
+                    connection
+                    for node in current_level
+                    for connection in node.connections
+                }
+                - collector
+            )
+
+            # Returns the current level and the recursion, or just the
+            # current level depending on whether any more unique nodes
+            # are found in this levels connections.
+            if next_level:
+                return (current_level,) + recurse(next_level, collector)
+            else:
+                return (current_level,)
+
+        # Starts the recursion by providing a starting level, and a
+        # set to act as a collector.
+        return recurse({self}, set())
 
     @classmethod
     def random_network(
