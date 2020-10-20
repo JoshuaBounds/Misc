@@ -1,7 +1,3 @@
-
-from random import randint
-
-
 """
 Node syntax:
 
@@ -61,6 +57,7 @@ Examples:
 """
 
 
+from random import *
 from typing import *
 
 
@@ -93,11 +90,13 @@ class Node:
 
     def __add__(self, other: _T_OPP_S) -> _T_OPP_R:
         if isinstance(other, self.__class__):
-            self << other
-            return self, other
+            return self, other << self
+        elif hasattr(other, '__iter__'):
+            t = tuple(other)
+            self << t[-1]
+            return (self,) + t
         else:
-            self << other[-1]
-            return (self,) + other
+            return self, Node(other) << self
 
     def __radd__(self, other: _T_OPP_S) -> _T_OPP_R:
         if isinstance(other, self.__class__):
@@ -258,20 +257,20 @@ class Node:
         """
 
         # Creates a series of ranges for each connection type
-        # on a 1-100 scale.
-        # c_mul is only used when calculating to total; it's range is
+        # on a 0.0-0.1 scale.
+        # c_mul is only used when calculating the total; it's range is
         # whatever remains after the first three ranges are determined.
-        fraction = 100 / (weight_sub + weight_add + weight_or + weight_mul)
+        fraction = 1.0 / (weight_sub + weight_add + weight_or + weight_mul)
         sub_range = fraction * weight_sub
         add_range = fraction * weight_add + sub_range
         or_range = fraction * weight_or + add_range
 
-        # Creates network by rolling a number between 1-100, and using
+        # Creates network by rolling a number between 0.0-1.0, and using
         # the operation of whatever range the number lays within.
         network = cls('root')
         for i in range(size):
 
-            r = randint(1, 100)
+            r = random()
             if r < sub_range:
                 network = network - cls(i)
             elif sub_range <= r < add_range:
@@ -286,8 +285,11 @@ class Node:
 
 if __name__ == '__main__':
 
-    for n in Node.random_network(10)[0].get_network():
-        print(n, n.connections)
+    print(Node('A'))
+
+    # for n in Node.random_network(10, 0, 0)[0].get_network():
+    #     # print(n, n.connections)
+    #     pass
 
     # N = Node
     #
