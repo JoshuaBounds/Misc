@@ -66,7 +66,10 @@ class NodeContainer:
             self._nodes[0] << other._nodes[-1]
         return self.__class__(*self._nodes + other._nodes)
 
-    def __and__(self, other: 'NodeContainer') -> 'NodeContainer':
+    def __mul__(self, other: 'NodeContainer') -> 'NodeContainer':
+        for node_a in self._nodes:
+            for node_b in other._nodes:
+                node_a << node_b
         return self.__class__(*self._nodes + other._nodes)
 
     def __xor__(self, other: 'NodeContainer') -> 'NodeContainer':
@@ -76,9 +79,6 @@ class NodeContainer:
         return self.__class__(*self._nodes + other._nodes)
 
     def __or__(self, other: 'NodeContainer') -> 'NodeContainer':
-        for node_a in self._nodes:
-            for node_b in other._nodes:
-                node_a << node_b
         return self.__class__(*self._nodes + other._nodes)
 
     def __isub__(self, other: 'NodeContainer') -> 'NodeContainer':
@@ -93,7 +93,10 @@ class NodeContainer:
         self._nodes += other._nodes
         return self
 
-    def __iand__(self, other: 'NodeContainer') -> 'NodeContainer':
+    def __imul__(self, other: 'NodeContainer') -> 'NodeContainer':
+        for node_a in self._nodes:
+            for node_b in other._nodes:
+                node_a << node_b
         self._nodes += other._nodes
         return self
 
@@ -105,9 +108,6 @@ class NodeContainer:
         return self
 
     def __ior__(self, other: 'NodeContainer') -> 'NodeContainer':
-        for node_a in self._nodes:
-            for node_b in other._nodes:
-                node_a << node_b
         self._nodes += other._nodes
         return self
 
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     # A-B
     # |X|
     # C-D
-    N = B-A ^ C | D
+    N = (B-A ^ C) * D
     print('')
     N.print_connections()
     N.clear_connections()
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     # B C D
     #  \|/
     #   E
-    N = A & E | B & C & D
+    N = (A | E) * (B | C | D)
     print('')
     N.print_connections()
     N.clear_connections()
