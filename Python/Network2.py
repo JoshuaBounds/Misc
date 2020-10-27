@@ -79,22 +79,57 @@ class NodeContainer:
         self._nodes += tuple(nodes)
 
     def combine(self, others: Iterable['NodeContainer']) -> 'NodeContainer':
+        """
+        Creates a new network using nodes from self, and given networks.
+
+        :param others:
+            Networks from which nodes will be gathered from and then
+            added to the new network.
+        """
         return self.__class__(chain([self], others))
 
     def connect_inside(self, other: 'NodeContainer') -> NoReturn:
+        """
+        Connects the last node of self, to the first node of other.
+
+        :param other:
+            Node network that should contain at least one node, but is
+            not required.
+        """
         if self.nodes and other.nodes:
             self.nodes[-1] << other.nodes[0]
 
     def connect_outside(self, other: 'NodeContainer') -> NoReturn:
+        """
+        Connects the first node of self, to the last node of other.
+
+        :param other:
+            Node network that should contain at least one node, but is
+            not required.
+        """
         if self.nodes and other.nodes:
             self.nodes[0] << other.nodes[-1]
 
     def connect_all(self, other: 'NodeContainer') -> NoReturn:
+        """
+        Connects each node in self, to each node in other.
+
+        :param other:
+            Node network that should contain at least one node, but is
+            not required.
+        """
         for node_a in self.nodes:
             for node_b in other.nodes:
                 node_a << node_b
 
     def connect_both_sides(self, other: 'NodeContainer') -> NoReturn:
+        """
+        Performs both connect_inside and connect_outside.
+
+        :param other:
+            Node network that should contain at least one node, but is
+            not required.
+        """
         if self.nodes and other.nodes:
             self.nodes[-1] << other.nodes[0]
             self.nodes[0] << other.nodes[-1]
@@ -147,10 +182,16 @@ class NodeContainer:
         return self._nodes
 
     def clear_connections(self) -> NoReturn:
+        """
+        Clears all connections between all nodes in the network.
+        """
         for n in self._nodes:
             n.connections.clear()
 
     def print_connections(self):
+        """
+        Prints out connections for each node in the network.
+        """
         lines = (
             str(node) + ' -> ' + ', '.join(map(str, node.connections))
             for node in self._nodes
