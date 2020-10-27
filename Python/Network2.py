@@ -12,6 +12,7 @@ Network syntax:
 """
 
 
+from itertools import *
 from typing import *
 
 
@@ -43,11 +44,16 @@ class NodeContainer:
 
     _nodes: Tuple[Node] = None
 
-    def __init__(self, *others: Any):
-        self._nodes = tuple(
-            other if isinstance(other, Node) else Node(other)
+    def __init__(self, others: Iterable[Any]):
+        ts = (
+            [other]
+            if isinstance(other, Node) else
+            other.nodes
+            if isinstance(other, self.__class__) else
+            [Node(other)]
             for other in others
         )
+        self._nodes = tuple(n for t in ts for n in t)
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -56,59 +62,84 @@ class NodeContainer:
         nodes = ', '.join(repr(n.data) for n in self._nodes)
         return 'Network(' + nodes + ')'
 
-    def __sub__(self, other: 'NodeContainer') -> 'NodeContainer':
-        if self._nodes and other._nodes:
-            self._nodes[-1] << other._nodes[0]
-        return self.__class__(*self._nodes + other._nodes)
+    def extend(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Extends the network using nodes from given networks.
 
-    def __add__(self, other: 'NodeContainer') -> 'NodeContainer':
-        if self._nodes and other._nodes:
-            self._nodes[0] << other._nodes[-1]
-        return self.__class__(*self._nodes + other._nodes)
+        :param others:
+            Networks from which nodes will be gathered from and then
+            added to this network.
+        """
+        nodes = (
+            n
+            for t in others
+            if isinstance(t, self.__class__)
+            for n in t.nodes
+        )
+        self._nodes += tuple(nodes)
 
-    def __mul__(self, other: 'NodeContainer') -> 'NodeContainer':
-        for node_a in self._nodes:
-            for node_b in other._nodes:
+    def combine(self, others: Iterable['NodeContainer']) -> 'NodeContainer':
+        return self.__class__(chain([self], others))
+
+    def connect_inside(self, other: 'NodeContainer') -> NoReturn:
+        if self.nodes and other.nodes:
+            self.nodes[-1] << other.nodes[0]
+
+    def connect_outside(self, other: 'NodeContainer') -> NoReturn:
+        if self.nodes and other.nodes:
+            self.nodes[0] << other.nodes[-1]
+
+    def connect_all(self, other: 'NodeContainer') -> NoReturn:
+        for node_a in self.nodes:
+            for node_b in other.nodes:
                 node_a << node_b
-        return self.__class__(*self._nodes + other._nodes)
 
-    def __xor__(self, other: 'NodeContainer') -> 'NodeContainer':
-        if self._nodes and other._nodes:
-            self._nodes[-1] << other._nodes[0]
-            self._nodes[0] << other._nodes[-1]
-        return self.__class__(*self._nodes + other._nodes)
+    def connect_both_sides(self, other: 'NodeContainer') -> NoReturn:
+        if self.nodes and other.nodes:
+            self.nodes[-1] << other.nodes[0]
+            self.nodes[0] << other.nodes[-1]
 
-    def __or__(self, other: 'NodeContainer') -> 'NodeContainer':
-        return self.__class__(*self._nodes + other._nodes)
+    def __sub__(self, other):
+        self.connect_inside(other)
+        return self.combine([other])
+
+    def __add__(self, other):
+        self.connect_outside(other)
+        return self.combine([other])
+
+    def __mul__(self, other):
+        self.connect_all(other)
+        return self.combine([other])
+
+    def __xor__(self, other):
+        self.connect_both_sides(other)
+        return self.combine([other])
+
+    def __or__(self, other):
+        return self.combine([other])
 
     def __isub__(self, other: 'NodeContainer') -> 'NodeContainer':
-        if self._nodes and other._nodes:
-            self._nodes[-1] << other._nodes[0]
-        self._nodes += other._nodes
+        self.connect_inside(other)
+        self.extend([other])
         return self
 
     def __iadd__(self, other: 'NodeContainer') -> 'NodeContainer':
-        if self._nodes and other._nodes:
-            self._nodes[0] << other._nodes[-1]
-        self._nodes += other._nodes
+        self.connect_outside(other)
+        self.extend([other])
         return self
 
     def __imul__(self, other: 'NodeContainer') -> 'NodeContainer':
-        for node_a in self._nodes:
-            for node_b in other._nodes:
-                node_a << node_b
-        self._nodes += other._nodes
+        self.connect_all(other)
+        self.extend([other])
         return self
 
     def __ixor__(self, other: 'NodeContainer') -> 'NodeContainer':
-        if self._nodes and other._nodes:
-            self._nodes[-1] << other._nodes[0]
-            self._nodes[0] << other._nodes[-1]
-        self._nodes += other._nodes
+        self.connect_both_sides(other)
+        self.extend([other])
         return self
 
     def __ior__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self._nodes += other._nodes
+        self.extend([other])
         return self
 
     @property
@@ -199,7 +230,7 @@ if __name__ == '__main__':
     #  \|/
     #   H
     # N = B-E & C-F & D-G
-    N = A-B-E+C-F
+    N = A-B-E + C-F
     print('')
     N.print_connections()
     N.clear_connections()
