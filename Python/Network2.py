@@ -48,13 +48,32 @@ class Node:
         self.connect(other)
         return self
 
+    def get_connection_island(self) -> Set['Node']:
+        """
+        Gets all nodes that share the same connection island with self.
+
+        A connection island is a group of nodes that are connected so
+        that a path can be drawn from any one node to another, including
+        passing through other nodes.
+        :return:
+            Set of nodes sharing the same connection island with self.
+        """
+
+        def recurse(node: Node, collector: Set[Node]):
+            collector.add(node)
+            for n in node.connections - collector:
+                recurse(n, collector)
+            return collector
+
+        return recurse(self, set())
+
 
 class NodeContainer:
 
     _nodes: Tuple[Node] = None
 
     def __init__(self, others: Iterable[Any]):
-        ts = (
+        node_containers = (
             [other]
             if isinstance(other, Node) else
             other.nodes
@@ -62,7 +81,7 @@ class NodeContainer:
             [Node(other)]
             for other in others
         )
-        self._nodes = tuple(n for t in ts for n in t)
+        self._nodes = tuple(chain(*node_containers))
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -97,7 +116,7 @@ class NodeContainer:
         """
         return self.__class__(chain([self], others))
 
-    def connect_inside(self, others: Iterable['NodeContainer']) -> NoReturn:
+    def connect_series(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
         Creates a connection in between each network.
 
@@ -113,12 +132,12 @@ class NodeContainer:
             if ta.nodes and tb.nodes:
                 ta.nodes[-1].connect(tb.nodes[0])
 
-    def connect_outside(self, others: Iterable['NodeContainer']) -> NoReturn:
+    def connect_heads(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
         Creates a connection on the outside of each network.
 
         Starting with self, then followed by each given network:
-        Connects the first node of the current network to the last node
+        Connects the first node of the current network to the first node
         of the next network.
         :param others:
             Node networks that should contain at least one node, but is
@@ -127,7 +146,7 @@ class NodeContainer:
         ts = list(chain([self], others))
         for ta, tb in zip(ts[::2], ts[1::2]):
             if ta.nodes and tb.nodes:
-                ta.nodes[0].connect(tb.nodes[-1])
+                ta.nodes[0].connect(tb.nodes[0])
 
     def connect_all(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
@@ -145,10 +164,14 @@ class NodeContainer:
             for a, b in product(ta.nodes, tb.nodes):
                 a.connect(b)
 
-    def connect_both_sides(self, others: Iterable['NodeContainer']) -> NoReturn:
+    def connect_parallel(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
-        Performs both connect_inside and connect_outside.
+        Creates connections between network heads and tails.
 
+        Starting with self, then followed by each given network:
+        Connects the first node of the current network to the first node
+        of the next network. Then connects the last node of the current
+        network to the last node of the next network.
         :param others:
             Node networks that should contain at least one node, but is
             not required.
@@ -156,17 +179,17 @@ class NodeContainer:
         ts = list(chain([self], others))
         for ta, tb in zip(ts[::2], ts[1::2]):
             if ta.nodes and tb.nodes:
-                ta.nodes[0].connect(tb.nodes[-1])
-                ta.nodes[-1].connect(tb.nodes[0])
+                ta.nodes[0].connect(tb.nodes[0])
+                ta.nodes[-1].connect(tb.nodes[-1])
 
-    def connect_tails(self, others: Iterable['NodeContainer']) -> NoReturn:
+    def connect_endings(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
-        Creates connections between tail nodes in bordering networks.
+        Creates connections between ending nodes in bordering networks.
 
-        A tail node is any node that has less than two connections.
+        An ending node is any node that has less than two connections.
         Starting with self, then followed by each given network:
-        Connects every tail node of the current network to every tail
-        node of the next network.
+        Connects every ending node of the current network to every
+        ending node of the next network.
         :param others:
             Node networks that should contain at least one node, but is
             not required.
@@ -177,36 +200,36 @@ class NodeContainer:
             for a, b in product(ta, tb):
                 a.connect(b)
 
-    def __sub__(self, other):
-        self.connect_inside([other])
+    def __sub__(self, other: 'NodeContainer') -> 'NodeContainer':
+        self.connect_series([other])
         return self.combine([other])
 
-    def __add__(self, other):
-        self.connect_outside([other])
+    def __add__(self, other: 'NodeContainer') -> 'NodeContainer':
+        self.connect_heads([other])
         return self.combine([other])
 
-    def __mul__(self, other):
+    def __mul__(self, other: 'NodeContainer') -> 'NodeContainer':
         self.connect_all([other])
         return self.combine([other])
 
-    def __mod__(self, other):
-        self.connect_tails([other])
+    def __mod__(self, other: 'NodeContainer') -> 'NodeContainer':
+        self.connect_endings([other])
         return self.combine([other])
 
-    def __xor__(self, other):
-        self.connect_both_sides([other])
+    def __xor__(self, other: 'NodeContainer') -> 'NodeContainer':
+        self.connect_parallel([other])
         return self.combine([other])
 
-    def __or__(self, other):
+    def __or__(self, other: 'NodeContainer') -> 'NodeContainer':
         return self.combine([other])
 
     def __isub__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_inside([other])
+        self.connect_series([other])
         self.extend([other])
         return self
 
     def __iadd__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_outside([other])
+        self.connect_heads([other])
         self.extend([other])
         return self
 
@@ -215,13 +238,13 @@ class NodeContainer:
         self.extend([other])
         return self
 
-    def __imod__(self, other):
-        self.connect_tails([other])
+    def __imod__(self, other: 'NodeContainer') -> 'NodeContainer':
+        self.connect_endings([other])
         self.extend([other])
         return self
 
     def __ixor__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_both_sides([other])
+        self.connect_parallel([other])
         self.extend([other])
         return self
 
@@ -233,96 +256,121 @@ class NodeContainer:
     def nodes(self) -> Tuple[Node]:
         return self._nodes
 
-    def clear_connections(self) -> NoReturn:
-        """
-        Clears all connections between all nodes in the network.
-        """
-        for n in self._nodes:
-            n.connections.clear()
 
-    def print_connections(self):
-        """
-        Prints out connections for each node in the network.
-        """
-        lines = (
-            str(node) + ' -> ' + ', '.join(map(str, node.connections))
-            for node in self._nodes
-        )
-        print('\n'.join(lines))
+def clear_connections(network) -> NoReturn:
+    """
+    Clears all connections between all nodes in the network.
+    """
+    for n in network.nodes:
+        n.connections.clear()
+
+
+def print_connections(network):
+    """
+    Prints out connections for each node in the network.
+    """
+    lines = (
+        str(node) + ' -> ' + ', '.join(map(str, node.connections))
+        for node in network.nodes
+    )
+    print('\n'.join(lines))
 
 
 if __name__ == '__main__':
 
-    A, B, C, D, E, F, G, H = map(NodeContainer, 'ABCDEFGH')
+    from pprint import pprint
 
-    # A-B
-    # |/
-    # C
-    N = A-B ^ C
-    print('')
-    N.print_connections()
-    N.clear_connections()
-
-    # A-B
-    # | |
-    # C-D
-    N = A-B-C ^ D
-    print('')
-    N.print_connections()
-    N.clear_connections()
-
-    # A-B
-    # |/|
-    # C-D
-    N = B-A ^ C ^ D
-    print('')
-    N.print_connections()
-    N.clear_connections()
-
-    # A-B
-    # |X|
-    # C-D
-    N = (B-A ^ C) * D
-    print('')
-    N.print_connections()
-    N.clear_connections()
-
-    # A-B-C
-    # | | |
-    # D-E-F
-    N = B-A-D ^ E ^ F-C
-    print('')
-    N.print_connections()
-    N.clear_connections()
-
-    # A-B
-    # | |
-    # C-D-E
-    #   | |
-    #   F-G
-    N = (D ^ B-A-C) + E-G ^ F
-    print('')
-    N.print_connections()
-    N.clear_connections()
+    A, B, C, D, E, F, G, H, I, J = map(NodeContainer, 'ABCDEFGHIJ')
 
     #   A
     #  /|\
-    # B C D
-    #  \|/
-    #   E
-    N = (A | E) * (B | C | D)
-    print('')
-    N.print_connections()
-    N.clear_connections()
-
-    #   A
-    #  /|\
-    # B C D
-    # | | |
-    # E F G
+    # B D F
+    #
+    # C E G
     #  \|/
     #   H
-    N = (A-B-E + C-F + D-G) % H
-    print('')
-    N.print_connections()
-    N.clear_connections()
+    N: NodeContainer = A-B+D+F | H-C+E+G
+    pprint(H.nodes[0].get_connection_island())
+    # pprint(N.get_connection_table())
+
+    # # A-B
+    # # |/
+    # # C
+    # N = A-B ^ C
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # # A-B
+    # # | |
+    # # C-D
+    # N = A-B-C ^ D
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # # A-B
+    # # |\|
+    # # C-D
+    # N = A-B + C * D
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # # A-B
+    # # |X|
+    # # D-C
+    # N = (A-B ^ C) * D
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # # B-A-E
+    # # | | |
+    # # C-D-F
+    # N = A-B-C ^ D ^ E-F
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # # C-B
+    # # | |
+    # # D-A-E
+    # #   | |
+    # #   G-F
+    # N = (A ^ B-C-D) + E-F ^ G
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # #   A
+    # #  /|\
+    # # C D E
+    # #  \|/
+    # #   B
+    # N = (A | B) * (C | D | E)
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # #   A
+    # #  /|\
+    # # B D F
+    # # | | |
+    # # C E G
+    # #  \|/
+    # #   H
+    # N = A-B-C + D-E + F-G % H
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # #     A---H-I
+    # #    / \   \
+    # #   B   E   J
+    # #  /|  /|
+    # # C D F G
+    # N = A - (B-C + D) + (E-F + G) + (H-I + J)
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
