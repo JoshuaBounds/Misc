@@ -34,9 +34,18 @@ class Node:
     def __repr__(self) -> str:
         return f'Node(' + repr(self.data) + ')'
 
-    def __lshift__(self, other: 'Node') -> 'Node':
+    def connect(self, other: 'Node') -> NoReturn:
+        """
+        Creates a connection between self and the given node.
+
+        :param other:
+            Other node to create a connection between.
+        """
         self.connections.add(other)
         other.connections.add(self)
+
+    def __lshift__(self, other):
+        self.connect(other)
         return self
 
 
@@ -88,88 +97,131 @@ class NodeContainer:
         """
         return self.__class__(chain([self], others))
 
-    def connect_inside(self, other: 'NodeContainer') -> NoReturn:
+    def connect_inside(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
-        Connects the last node of self, to the first node of other.
+        Creates a connection in between each network.
 
-        :param other:
-            Node network that should contain at least one node, but is
+        Starting with self, then followed by each given network:
+        Connects the last node of the current network to the first node
+        of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
             not required.
         """
-        if self.nodes and other.nodes:
-            self.nodes[-1] << other.nodes[0]
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            if ta.nodes and tb.nodes:
+                ta.nodes[-1].connect(tb.nodes[0])
 
-    def connect_outside(self, other: 'NodeContainer') -> NoReturn:
+    def connect_outside(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
-        Connects the first node of self, to the last node of other.
+        Creates a connection on the outside of each network.
 
-        :param other:
-            Node network that should contain at least one node, but is
+        Starting with self, then followed by each given network:
+        Connects the first node of the current network to the last node
+        of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
             not required.
         """
-        if self.nodes and other.nodes:
-            self.nodes[0] << other.nodes[-1]
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            if ta.nodes and tb.nodes:
+                ta.nodes[0].connect(tb.nodes[-1])
 
-    def connect_all(self, other: 'NodeContainer') -> NoReturn:
+    def connect_all(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
-        Connects each node in self, to each node in other.
+        Creates connections between every node in bordering networks.
 
-        :param other:
-            Node network that should contain at least one node, but is
+        Starting with self, then followed by each given network:
+        Connects every node of the current network to every node of the
+        next network.
+        :param others:
+            Node networks that should contain at least one node, but is
             not required.
         """
-        for node_a in self.nodes:
-            for node_b in other.nodes:
-                node_a << node_b
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            for a, b in product(ta.nodes, tb.nodes):
+                a.connect(b)
 
-    def connect_both_sides(self, other: 'NodeContainer') -> NoReturn:
+    def connect_both_sides(self, others: Iterable['NodeContainer']) -> NoReturn:
         """
         Performs both connect_inside and connect_outside.
 
-        :param other:
-            Node network that should contain at least one node, but is
+        :param others:
+            Node networks that should contain at least one node, but is
             not required.
         """
-        if self.nodes and other.nodes:
-            self.nodes[-1] << other.nodes[0]
-            self.nodes[0] << other.nodes[-1]
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            if ta.nodes and tb.nodes:
+                ta.nodes[0].connect(tb.nodes[-1])
+                ta.nodes[-1].connect(tb.nodes[0])
+
+    def connect_tails(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Creates connections between tail nodes in bordering networks.
+
+        A tail node is any node that has less than two connections.
+        Starting with self, then followed by each given network:
+        Connects every tail node of the current network to every tail
+        node of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
+            not required.
+        """
+        ts = list(chain([self], others))
+        tails = [[n for n in t.nodes if len(n.connections) < 2] for t in ts]
+        for ta, tb in zip(tails[::2], tails[1::2]):
+            for a, b in product(ta, tb):
+                a.connect(b)
 
     def __sub__(self, other):
-        self.connect_inside(other)
+        self.connect_inside([other])
         return self.combine([other])
 
     def __add__(self, other):
-        self.connect_outside(other)
+        self.connect_outside([other])
         return self.combine([other])
 
     def __mul__(self, other):
-        self.connect_all(other)
+        self.connect_all([other])
+        return self.combine([other])
+
+    def __mod__(self, other):
+        self.connect_tails([other])
         return self.combine([other])
 
     def __xor__(self, other):
-        self.connect_both_sides(other)
+        self.connect_both_sides([other])
         return self.combine([other])
 
     def __or__(self, other):
         return self.combine([other])
 
     def __isub__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_inside(other)
+        self.connect_inside([other])
         self.extend([other])
         return self
 
     def __iadd__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_outside(other)
+        self.connect_outside([other])
         self.extend([other])
         return self
 
     def __imul__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_all(other)
+        self.connect_all([other])
+        self.extend([other])
+        return self
+
+    def __imod__(self, other):
+        self.connect_tails([other])
         self.extend([other])
         return self
 
     def __ixor__(self, other: 'NodeContainer') -> 'NodeContainer':
-        self.connect_both_sides(other)
+        self.connect_both_sides([other])
         self.extend([other])
         return self
 
@@ -270,8 +322,7 @@ if __name__ == '__main__':
     # E F G
     #  \|/
     #   H
-    # N = B-E & C-F & D-G
-    N = A-B-E + C-F
+    N = (A-B-E + C-F + D-G) % H
     print('')
     N.print_connections()
     N.clear_connections()
