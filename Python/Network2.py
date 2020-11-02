@@ -59,13 +59,90 @@ class Node:
             Set of nodes sharing the same connection island with self.
         """
 
-        def recurse(node: Node, collector: Set[Node]):
-            collector.add(node)
-            for n in node.connections - collector:
-                recurse(n, collector)
-            return collector
+        collector = {self}
+        new_nodes = [self]
+        while new_nodes:
+            new_nodes[:] = (
+                c for n in new_nodes for c in n.connections
+                if c not in collector
+            )
+            collector.update(new_nodes)
 
-        return recurse(self, set())
+        return collector
+
+    def get_connection_propagation(self):
+        """
+        Gets propagation levels moving away from self.
+
+        Returns a tuple of sets where each set contains nodes that all
+        share the same connection distance away from self. The index of
+        each set in the return tuple represents the connection distance.
+        :return:
+            Tuple of sets that represent the connection propagation from
+            self.
+        """
+
+        levels = []
+        collector = {self}
+        next_level = {self}
+        while next_level:
+            levels.append(next_level)
+            next_level = {
+                c for n in next_level for c in n.connections
+                if c not in collector
+            }
+            collector.update(next_level)
+
+        return levels
+
+    def get_shortest_path(self, node):
+
+        collector_a = {self}
+        next_level_a = {self}
+        levels_a = [next_level_a]
+        collector_b = {node}
+        next_level_b = {node}
+        levels_b = [next_level_b]
+        while not collector_a & collector_b:
+
+            next_level_a = {
+                c for n in next_level_a for c in n.connections
+                if c not in collector_a
+            }
+            levels_a.append(next_level_a)
+            collector_a.update(next_level_a)
+
+            next_level_b = {
+                c for n in next_level_b for c in n.connections
+                if c not in collector_b
+            }
+            levels_b.append(next_level_b)
+            collector_b.update(next_level_b)
+
+        for v in reversed(levels_a):
+            print(v)
+
+    # def get_connection_propagation(self):
+    #     """
+    #     Gets propagation levels moving away from self.
+    #
+    #     Returns a tuple of sets where each set contains nodes that all
+    #     share the same connection distance away from self. The index of
+    #     each set in the return tuple represents the connection distance.
+    #     :return:
+    #         Tuple of sets that represent the connection propagation from
+    #         self.
+    #     """
+    #
+    #     def recurse(current_level: Set[Node], collector: Set[Node]):
+    #         collector |= current_level
+    #         new_nodes = set.union(*(n.connections for n in current_level))
+    #         next_level = new_nodes - collector
+    #         if next_level:
+    #             return recurse(next_level, collector) + (current_level,)
+    #         return (current_level,)
+    #
+    #     return recurse({self}, set())
 
 
 class NodeContainer:
@@ -285,13 +362,15 @@ if __name__ == '__main__':
     #   A
     #  /|\
     # B D F
-    #
+    # | | |
     # C E G
     #  \|/
     #   H
-    N: NodeContainer = A-B+D+F | H-C+E+G
-    pprint(H.nodes[0].get_connection_island())
-    # pprint(N.get_connection_table())
+    N: NodeContainer = (A-B-C + D-E + F-G) % H
+    print_connections(N)
+    # pprint(H.nodes[0].get_connection_propagation())
+    # pprint(H.nodes[0].get_connection_island())
+    pprint(H.nodes[0].get_shortest_path(A.nodes[0]))
 
     # # A-B
     # # |/
