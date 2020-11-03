@@ -95,54 +95,47 @@ class Node:
 
         return levels
 
-    def get_shortest_path(self, node):
+    def find_path(self, node):
 
         collector_a = {self}
-        next_level_a = {self}
-        levels_a = [next_level_a]
         collector_b = {node}
-        next_level_b = {node}
-        levels_b = [next_level_b]
-        while not collector_a & collector_b:
+        next_nodes_a = {self}
+        next_nodes_b = {node}
+        levels_a = [next_nodes_a]
+        levels_b = [next_nodes_b]
+        i = 0
+        while i < 100:
 
-            next_level_a = {
-                c for n in next_level_a for c in n.connections
+            next_nodes_a = {
+                c for n in next_nodes_a for c in n.connections
                 if c not in collector_a
             }
-            levels_a.append(next_level_a)
-            collector_a.update(next_level_a)
-
-            next_level_b = {
-                c for n in next_level_b for c in n.connections
+            next_nodes_b = {
+                c for n in next_nodes_b for c in n.connections
                 if c not in collector_b
             }
-            levels_b.append(next_level_b)
-            collector_b.update(next_level_b)
 
-        for v in reversed(levels_a):
-            print(v)
+            if next_nodes_a & collector_b:
+                break
 
-    # def get_connection_propagation(self):
-    #     """
-    #     Gets propagation levels moving away from self.
-    #
-    #     Returns a tuple of sets where each set contains nodes that all
-    #     share the same connection distance away from self. The index of
-    #     each set in the return tuple represents the connection distance.
-    #     :return:
-    #         Tuple of sets that represent the connection propagation from
-    #         self.
-    #     """
-    #
-    #     def recurse(current_level: Set[Node], collector: Set[Node]):
-    #         collector |= current_level
-    #         new_nodes = set.union(*(n.connections for n in current_level))
-    #         next_level = new_nodes - collector
-    #         if next_level:
-    #             return recurse(next_level, collector) + (current_level,)
-    #         return (current_level,)
-    #
-    #     return recurse({self}, set())
+            collector_a.update(next_nodes_a)
+            levels_a.append(next_nodes_a)
+            collector_b.update(next_nodes_b)
+            levels_b.append(next_nodes_b)
+
+            i += 1
+
+        # return (
+        #     collector_a,
+        #     collector_b,
+        #     collector_a & collector_b,
+        #     next_nodes_a,
+        #     next_nodes_b,
+        #     next_nodes_a & next_nodes_b,
+        #     levels_a,
+        #     levels_b,
+        #     i
+        # )
 
 
 class NodeContainer:
@@ -370,7 +363,7 @@ if __name__ == '__main__':
     print_connections(N)
     # pprint(H.nodes[0].get_connection_propagation())
     # pprint(H.nodes[0].get_connection_island())
-    pprint(H.nodes[0].get_shortest_path(A.nodes[0]))
+    pprint(H.nodes[0].find_path(A.nodes[0]))
 
     # # A-B
     # # |/
