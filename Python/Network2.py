@@ -3,15 +3,22 @@ from itertools import *
 from typing import *
 
 
-__all__ = 'Node',
+__all__ = 'Node', 'NodeContainer'
 
 
 class Node:
+    """
+    Basic node type for modeling connection networks.
+    """
 
     data: Any = None
     connections: Set['Node'] = None
 
     def __init__(self, data: Any = None):
+        """
+        :param data:
+            Data that this node will contain.
+        """
         self.data = data
         self.connections = set()
 
@@ -149,10 +156,22 @@ class Node:
 
 
 class NodeContainer:
+    """
+    Container type used for managing node networks.
+    """
 
     _nodes: Tuple[Node] = None
 
     def __init__(self, others: Iterable[Any]):
+        """
+        :param others:
+            Iterable of objects to serve as Nodes for this container.
+            Node types are accepted "as is".
+            With NodeContainer types, the nodes they contain will be
+            used instead.
+            If the given object type is not a Node or NodeContainer,
+            then a new node will be created to contain it.
+        """
         node_containers = (
             [other]
             if isinstance(other, Node) else
