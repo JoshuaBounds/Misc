@@ -1,16 +1,3 @@
-"""
-Network syntax:
-
-    OOO : OPP : CONNECT TO
-    ----------------------------
-    1   : (-) : CLOSEST
-    1   : (+) : FURTHEST
-    2   : (&) : NOTHING
-    3   : (^) : CLOSEST AND FURTHEST
-    4   : (|) : ALL
-
-"""
-
 
 from itertools import *
 from typing import *
@@ -95,47 +82,70 @@ class Node:
 
         return levels
 
-    def find_path(self, node):
+    def find_path(self, node: 'Node') -> Union[List['Node'], None]:
+        """
+        Finds the shortest path from self to the given node.
 
+        Uses two point propagation method.
+        :param node:
+            Target node find a path towards.
+        :return:
+            List representing the path from self to the target node.
+            Returns None if no path could be found.
+        """
+
+        # Propagates outwards from both self and the target node until
+        # the covered area overlaps.
         collector_a = {self}
         collector_b = {node}
         next_nodes_a = {self}
         next_nodes_b = {node}
         levels_a = [next_nodes_a]
         levels_b = [next_nodes_b]
-        i = 0
-        while i < 100:
+        while next_nodes_a or next_nodes_b:
 
             next_nodes_a = {
                 c for n in next_nodes_a for c in n.connections
                 if c not in collector_a
             }
+            collector_a.update(next_nodes_a)
+            levels_a.append(next_nodes_a)
+
+            if collector_a & collector_b:
+                break
+
             next_nodes_b = {
                 c for n in next_nodes_b for c in n.connections
                 if c not in collector_b
             }
-
-            if next_nodes_a & collector_b:
-                break
-
-            collector_a.update(next_nodes_a)
-            levels_a.append(next_nodes_a)
             collector_b.update(next_nodes_b)
             levels_b.append(next_nodes_b)
 
-            i += 1
+            if collector_a & collector_b:
+                break
 
-        # return (
-        #     collector_a,
-        #     collector_b,
-        #     collector_a & collector_b,
-        #     next_nodes_a,
-        #     next_nodes_b,
-        #     next_nodes_a & next_nodes_b,
-        #     levels_a,
-        #     levels_b,
-        #     i
-        # )
+        else:
+            # If no more unique nodes could be found, signifying that no
+            # path exists between self, and the target node.
+            return None
+
+        # Propagates backwards from the overlapping areas back to both
+        # self, and the target node.
+        epicenter = (collector_a & collector_b).pop()
+
+        back_node = epicenter
+        path_a = [back_node]
+        for level in reversed(levels_a[:-1]):
+            back_node = (back_node.connections & level).pop()
+            path_a.append(back_node)
+
+        back_node = epicenter
+        path_b = [back_node]
+        for level in reversed(levels_b[:-1]):
+            back_node = (back_node.connections & level).pop()
+            path_b.append(back_node)
+
+        return path_a[:0:-1] + path_b
 
 
 class NodeContainer:
@@ -159,116 +169,6 @@ class NodeContainer:
     def __repr__(self) -> str:
         nodes = ', '.join(repr(n.data) for n in self._nodes)
         return 'Network(' + nodes + ')'
-
-    def extend(self, others: Iterable['NodeContainer']) -> NoReturn:
-        """
-        Extends the network using nodes from given networks.
-
-        :param others:
-            Networks from which nodes will be gathered from and then
-            added to this network.
-        """
-        nodes = (
-            n
-            for t in others
-            if isinstance(t, self.__class__)
-            for n in t.nodes
-        )
-        self._nodes += tuple(nodes)
-
-    def combine(self, others: Iterable['NodeContainer']) -> 'NodeContainer':
-        """
-        Creates a new network using nodes from self, and given networks.
-
-        :param others:
-            Networks from which nodes will be gathered from and then
-            added to the new network.
-        """
-        return self.__class__(chain([self], others))
-
-    def connect_series(self, others: Iterable['NodeContainer']) -> NoReturn:
-        """
-        Creates a connection in between each network.
-
-        Starting with self, then followed by each given network:
-        Connects the last node of the current network to the first node
-        of the next network.
-        :param others:
-            Node networks that should contain at least one node, but is
-            not required.
-        """
-        ts = list(chain([self], others))
-        for ta, tb in zip(ts[::2], ts[1::2]):
-            if ta.nodes and tb.nodes:
-                ta.nodes[-1].connect(tb.nodes[0])
-
-    def connect_heads(self, others: Iterable['NodeContainer']) -> NoReturn:
-        """
-        Creates a connection on the outside of each network.
-
-        Starting with self, then followed by each given network:
-        Connects the first node of the current network to the first node
-        of the next network.
-        :param others:
-            Node networks that should contain at least one node, but is
-            not required.
-        """
-        ts = list(chain([self], others))
-        for ta, tb in zip(ts[::2], ts[1::2]):
-            if ta.nodes and tb.nodes:
-                ta.nodes[0].connect(tb.nodes[0])
-
-    def connect_all(self, others: Iterable['NodeContainer']) -> NoReturn:
-        """
-        Creates connections between every node in bordering networks.
-
-        Starting with self, then followed by each given network:
-        Connects every node of the current network to every node of the
-        next network.
-        :param others:
-            Node networks that should contain at least one node, but is
-            not required.
-        """
-        ts = list(chain([self], others))
-        for ta, tb in zip(ts[::2], ts[1::2]):
-            for a, b in product(ta.nodes, tb.nodes):
-                a.connect(b)
-
-    def connect_parallel(self, others: Iterable['NodeContainer']) -> NoReturn:
-        """
-        Creates connections between network heads and tails.
-
-        Starting with self, then followed by each given network:
-        Connects the first node of the current network to the first node
-        of the next network. Then connects the last node of the current
-        network to the last node of the next network.
-        :param others:
-            Node networks that should contain at least one node, but is
-            not required.
-        """
-        ts = list(chain([self], others))
-        for ta, tb in zip(ts[::2], ts[1::2]):
-            if ta.nodes and tb.nodes:
-                ta.nodes[0].connect(tb.nodes[0])
-                ta.nodes[-1].connect(tb.nodes[-1])
-
-    def connect_endings(self, others: Iterable['NodeContainer']) -> NoReturn:
-        """
-        Creates connections between ending nodes in bordering networks.
-
-        An ending node is any node that has less than two connections.
-        Starting with self, then followed by each given network:
-        Connects every ending node of the current network to every
-        ending node of the next network.
-        :param others:
-            Node networks that should contain at least one node, but is
-            not required.
-        """
-        ts = list(chain([self], others))
-        tails = [[n for n in t.nodes if len(n.connections) < 2] for t in ts]
-        for ta, tb in zip(tails[::2], tails[1::2]):
-            for a, b in product(ta, tb):
-                a.connect(b)
 
     def __sub__(self, other: 'NodeContainer') -> 'NodeContainer':
         self.connect_series([other])
@@ -322,9 +222,135 @@ class NodeContainer:
         self.extend([other])
         return self
 
+    def extend(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Extends the network using nodes from given networks.
+
+        :param others:
+            Networks from which nodes will be gathered from and then
+            added to this network.
+        """
+        nodes = (
+            n
+            for t in others
+            if isinstance(t, self.__class__)
+            for n in t.nodes
+        )
+        self._nodes += tuple(nodes)
+
+    def combine(self, others: Iterable['NodeContainer']) -> 'NodeContainer':
+        """
+        Creates a new network using nodes from self, and given networks.
+
+        Can also be accessed via the (|) operator.
+
+        :param others:
+            Networks from which nodes will be gathered from and then
+            added to the new network.
+        """
+        return self.__class__(chain([self], others))
+
+    def connect_series(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Creates a connection in between each network.
+
+        Can also be accessed via the (-) operator.
+
+        Starting with self, then followed by each given network:
+        Connects the last node of the current network to the first node
+        of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
+            not required.
+        """
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            if ta.nodes and tb.nodes:
+                ta.nodes[-1].connect(tb.nodes[0])
+
+    def connect_heads(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Creates a connection on the outside of each network.
+
+        Can also be accessed via the (+) operator.
+
+        Starting with self, then followed by each given network:
+        Connects the first node of the current network to the first node
+        of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
+            not required.
+        """
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            if ta.nodes and tb.nodes:
+                ta.nodes[0].connect(tb.nodes[0])
+
+    def connect_all(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Creates connections between every node in bordering networks.
+
+        Can also be accessed via the (*) operator.
+
+        Starting with self, then followed by each given network:
+        Connects every node of the current network to every node of the
+        next network.
+        :param others:
+            Node networks that should contain at least one node, but is
+            not required.
+        """
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            for a, b in product(ta.nodes, tb.nodes):
+                a.connect(b)
+
+    def connect_parallel(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Creates connections between network heads and tails.
+
+        Can also be accessed via the (^) operator.
+
+        Starting with self, then followed by each given network:
+        Connects the first node of the current network to the first node
+        of the next network. Then connects the last node of the current
+        network to the last node of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
+            not required.
+        """
+        ts = list(chain([self], others))
+        for ta, tb in zip(ts[::2], ts[1::2]):
+            if ta.nodes and tb.nodes:
+                ta.nodes[0].connect(tb.nodes[0])
+                ta.nodes[-1].connect(tb.nodes[-1])
+
+    def connect_endings(self, others: Iterable['NodeContainer']) -> NoReturn:
+        """
+        Creates connections between ending nodes in bordering networks.
+
+        Can also be accessed via the (%) operator.
+
+        An ending node is any node that has less than two connections.
+        Starting with self, then followed by each given network:
+        Connects every ending node of the current network to every
+        ending node of the next network.
+        :param others:
+            Node networks that should contain at least one node, but is
+            not required.
+        """
+        ts = list(chain([self], others))
+        tails = [[n for n in t.nodes if len(n.connections) < 2] for t in ts]
+        for ta, tb in zip(tails[::2], tails[1::2]):
+            for a, b in product(ta, tb):
+                a.connect(b)
+
     @property
     def nodes(self) -> Tuple[Node]:
         return self._nodes
+
+    @property
+    def node(self) -> Node:
+        return self._nodes and self._nodes[0] or None
 
 
 def clear_connections(network) -> NoReturn:
@@ -346,6 +372,12 @@ def print_connections(network):
     print('\n'.join(lines))
 
 
+def print_all_paths(network):
+    root, others = network.nodes[0], network.nodes[1:]
+    for node in others:
+        pprint(root.find_path(node))
+
+
 if __name__ == '__main__':
 
     from pprint import pprint
@@ -359,90 +391,112 @@ if __name__ == '__main__':
     # C E G
     #  \|/
     #   H
-    N: NodeContainer = (A-B-C + D-E + F-G) % H
+    N = (A-B-C + D-E + F-G) % H
+    print('')
     print_connections(N)
-    # pprint(H.nodes[0].get_connection_propagation())
-    # pprint(H.nodes[0].get_connection_island())
-    pprint(H.nodes[0].find_path(A.nodes[0]))
+    pprint(A.node.find_path(H.node))
+    clear_connections(N)
 
-    # # A-B
-    # # |/
-    # # C
-    # N = A-B ^ C
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # # A-B
-    # # | |
-    # # C-D
-    # N = A-B-C ^ D
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # # A-B
-    # # |\|
-    # # C-D
-    # N = A-B + C * D
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # # A-B
-    # # |X|
-    # # D-C
-    # N = (A-B ^ C) * D
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # # B-A-E
-    # # | | |
-    # # C-D-F
-    # N = A-B-C ^ D ^ E-F
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # # C-B
-    # # | |
-    # # D-A-E
-    # #   | |
-    # #   G-F
-    # N = (A ^ B-C-D) + E-F ^ G
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # #   A
-    # #  /|\
-    # # C D E
-    # #  \|/
-    # #   B
-    # N = (A | B) * (C | D | E)
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # #   A
-    # #  /|\
-    # # B D F
-    # # | | |
-    # # C E G
-    # #  \|/
-    # #   H
-    # N = A-B-C + D-E + F-G % H
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
-    #
-    # #     A---H-I
-    # #    / \   \
-    # #   B   E   J
-    # #  /|  /|
-    # # C D F G
-    # N = A - (B-C + D) + (E-F + G) + (H-I + J)
-    # print('')
-    # print_connections(N)
-    # clear_connections(N)
+    # A-B
+    # |/
+    # C
+    N = A-B ^ C
+    print('')
+    print_connections(N)
+    pprint(A.node.find_path(B.node))
+    clear_connections(N)
+
+    # A-B
+    # | |
+    # D-C
+    N = A-B-C ^ D
+    print('')
+    print_connections(N)
+    pprint(A.node.find_path(C.node))
+    pprint(A.node.find_path(C.node))
+    pprint(A.node.find_path(C.node))
+    clear_connections(N)
+
+    # A-B
+    # |\|
+    # C-D
+    N = (A-B + C) * D
+    print('')
+    print_connections(N)
+    pprint(A.node.find_path(B.node))
+    pprint(A.node.find_path(C.node))
+    pprint(A.node.find_path(D.node))
+    clear_connections(N)
+
+    # A-B
+    # |X|
+    # D-C
+    N = (A-B ^ C) * D
+    print('')
+    print_connections(N)
+    pprint(A.node.find_path(C.node))
+    pprint(A.node.find_path(B.node))
+    pprint(A.node.find_path(D.node))
+    clear_connections(N)
+
+    # B-A-E
+    # | | |
+    # C-D-F
+    N = A-B-C ^ D ^ E-F
+    print('')
+    print_connections(N)
+    pprint(B.node.find_path(A.node))
+    pprint(B.node.find_path(C.node))
+    pprint(B.node.find_path(D.node))
+    pprint(B.node.find_path(E.node))
+    pprint(B.node.find_path(F.node))
+    clear_connections(N)
+
+    # C-B
+    # | |
+    # D-A-E
+    #   | |
+    #   G-F
+    N = (A ^ B-C-D) + E-F ^ G
+    print('')
+    print_connections(N)
+    pprint(C.node.find_path(B.node))
+    pprint(C.node.find_path(D.node))
+    pprint(C.node.find_path(A.node))
+    pprint(C.node.find_path(E.node))
+    pprint(C.node.find_path(G.node))
+    pprint(C.node.find_path(F.node))
+    clear_connections(N)
+
+    #   A
+    #  /|\
+    # C D E
+    #  \|/
+    #   B
+    N = (A | B) * (C | D | E)
+    print('')
+    print_connections(N)
+    clear_connections(N)
+
+    #   A
+    #  /|\
+    # B D F
+    # | | |
+    # C E G
+    #  \|/
+    #   H
+    N = A-B-C + D-E + F-G % H
+    print('')
+    print_connections(N)
+    clear_connections(N)
+
+    #     A---H-I
+    #    / \   \
+    #   B   E   J
+    #  /|  /|
+    # C D F G
+    N = A - (B-C + D) + (E-F + G) + (H-I + J)
+    print('')
+    print_connections(N)
+    pprint(A.node.find_path(G.node))
+    clear_connections(N)
