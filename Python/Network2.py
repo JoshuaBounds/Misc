@@ -353,34 +353,20 @@ class NodeContainer:
         return self._nodes and self._nodes[0] or None
 
 
-def clear_connections(network) -> NoReturn:
-    """
-    Clears all connections between all nodes in the network.
-    """
-    for n in network.nodes:
-        n.connections.clear()
-
-
-def print_connections(network):
-    """
-    Prints out connections for each node in the network.
-    """
-    lines = (
-        str(node) + ' -> ' + ', '.join(map(str, node.connections))
-        for node in network.nodes
-    )
-    print('\n'.join(lines))
-
-
-def print_all_paths(network):
-    root, others = network.nodes[0], network.nodes[1:]
-    for node in others:
-        pprint(root.find_path(node))
-
-
 if __name__ == '__main__':
 
     from pprint import pprint
+
+    def clear_connections(network) -> NoReturn:
+        for n in network.nodes:
+            n.connections.clear()
+
+    def print_connections(network):
+        lines = (
+            str(node) + ' -> ' + ', '.join(map(str, node.connections))
+            for node in network.nodes
+        )
+        print('\n'.join(lines))
 
     A, B, C, D, E, F, G, H, I, J = map(NodeContainer, 'ABCDEFGHIJ')
 
