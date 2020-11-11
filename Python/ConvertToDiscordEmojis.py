@@ -25,10 +25,11 @@ table = {
     'v': ':orange_heart:',
     'b': ':purple_heart:',
     'n': ':heart:',
+    'm': ':white_heart:',
 }
 
 if __name__ == '__main__':
 
     sentence = input('convert to discord emojis:')
-    message = ''.join(table.get(c, c) for c in sentence)
+    message = ''.join(table.get(c, c) for c in sentence.lower())
     print(message)
