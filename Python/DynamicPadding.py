@@ -21,6 +21,17 @@ def dynamic_padding2(item, index, trigger_pattern=r'#+'):
     ))
 
 
+def dynamic_padding3(name, index, trigger_pattern=r'#+'):
+    re_compile = re.compile(trigger_pattern)
+    format_args = (
+        x
+        for m in re_compile.finditer(name)
+        for x in (index, m.end() - m.start())
+    )
+    pre_format = re_compile.sub('{:0{}}', name)
+    return pre_format.format(*format_args)
+
+
 if __name__ == '__main__':
 
-    print(dynamic_padding2('time ## thing #### bob', 1))
+    print(dynamic_padding3('time ## thing #### bob', 123))

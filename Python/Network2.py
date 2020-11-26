@@ -389,119 +389,119 @@ if __name__ == '__main__':
 
     A, B, C, D, E, F, G, H, I, J = map(NodeContainer, 'ABCDEFGHIJ')
 
-    #   A
-    #  /|\
-    # B D F
-    # | | |
-    # C E G
-    #  \|/
-    #   H
-    N = (A-B-C + D-E + F-G) % H
-    print('')
-    print_connections(N)
-    pprint(A.node.find_path(H.node))
-    clear_connections(N)
-
-    # A-B
-    # |/
-    # C
-    N = A-B ^ C
-    print('')
-    print_connections(N)
-    pprint(A.node.find_path(B.node))
-    clear_connections(N)
-
-    # A-B
-    # | |
-    # D-C
-    N = A-B-C ^ D
-    print('')
-    print_connections(N)
-    pprint(A.node.find_path(C.node))
-    pprint(A.node.find_path(C.node))
-    pprint(A.node.find_path(C.node))
-    clear_connections(N)
-
-    # A-B
-    # |\|
-    # C-D
-    N = (A-B + C) * D
-    print('')
-    print_connections(N)
-    pprint(A.node.find_path(B.node))
-    pprint(A.node.find_path(C.node))
-    pprint(A.node.find_path(D.node))
-    clear_connections(N)
-
-    # A-B
-    # |X|
-    # D-C
-    N = (A-B ^ C) * D
-    print('')
-    print_connections(N)
-    pprint(A.node.find_path(C.node))
-    pprint(A.node.find_path(B.node))
-    pprint(A.node.find_path(D.node))
-    clear_connections(N)
-
-    # B-A-E
-    # | | |
-    # C-D-F
-    N = A-B-C ^ D ^ E-F
-    print('')
-    print_connections(N)
-    pprint(B.node.find_path(A.node))
-    pprint(B.node.find_path(C.node))
-    pprint(B.node.find_path(D.node))
-    pprint(B.node.find_path(E.node))
-    pprint(B.node.find_path(F.node))
-    clear_connections(N)
-
-    # C-B
-    # | |
-    # D-A-E
-    #   | |
-    #   G-F
-    N = (A ^ B-C-D) + E-F ^ G
-    print('')
-    print_connections(N)
-    pprint(C.node.find_path(B.node))
-    pprint(C.node.find_path(D.node))
-    pprint(C.node.find_path(A.node))
-    pprint(C.node.find_path(E.node))
-    pprint(C.node.find_path(G.node))
-    pprint(C.node.find_path(F.node))
-    clear_connections(N)
-
-    #   A
-    #  /|\
-    # C D E
-    #  \|/
-    #   B
-    N = (A | B) * (C | D | E)
-    print('')
-    print_connections(N)
-    clear_connections(N)
-
-    #   A
-    #  /|\
-    # B D F
-    # | | |
-    # C E G
-    #  \|/
-    #   H
-    N = A-B-C + D-E + F-G % H
-    print('')
-    print_connections(N)
-    clear_connections(N)
-
-    #     A---H-I
-    #    / \   \
-    #   B   E   J
-    #  /|  /|
-    # C D F G
-    N = A - (B-C + D) + (E-F + G) + (H-I + J)
-    print('')
-    print_connections(N)
-    pprint(A.node.find_path(G.node))
-    clear_connections(N)
+    # #   A
+    # #  /|\
+    # # B D F
+    # # | | |
+    # # C E G
+    # #  \|/
+    # #   H
+    # N = (A-B-C + D-E + F-G) % H
+    # print('')
+    # print_connections(N)
+    # pprint(A.node.find_path(H.node))
+    # clear_connections(N)
+    #
+    # # A-B
+    # # |/
+    # # C
+    # N = A-B ^ C
+    # print('')
+    # print_connections(N)
+    # pprint(A.node.find_path(B.node))
+    # clear_connections(N)
+    #
+    # # A-B
+    # # | |
+    # # D-C
+    # N = A-B-C ^ D
+    # print('')
+    # print_connections(N)
+    # pprint(A.node.find_path(C.node))
+    # pprint(A.node.find_path(C.node))
+    # pprint(A.node.find_path(C.node))
+    # clear_connections(N)
+    #
+    # # A-B
+    # # |\|
+    # # C-D
+    # N = (A-B + C) * D
+    # print('')
+    # print_connections(N)
+    # pprint(A.node.find_path(B.node))
+    # pprint(A.node.find_path(C.node))
+    # pprint(A.node.find_path(D.node))
+    # clear_connections(N)
+    #
+    # # A-B
+    # # |X|
+    # # D-C
+    # N = (A-B ^ C) * D
+    # print('')
+    # print_connections(N)
+    # pprint(A.node.find_path(C.node))
+    # pprint(A.node.find_path(B.node))
+    # pprint(A.node.find_path(D.node))
+    # clear_connections(N)
+    #
+    # # B-A-E
+    # # | | |
+    # # C-D-F
+    # N = A-B-C ^ D ^ E-F
+    # print('')
+    # print_connections(N)
+    # pprint(B.node.find_path(A.node))
+    # pprint(B.node.find_path(C.node))
+    # pprint(B.node.find_path(D.node))
+    # pprint(B.node.find_path(E.node))
+    # pprint(B.node.find_path(F.node))
+    # clear_connections(N)
+    #
+    # # C-B
+    # # | |
+    # # D-A-E
+    # #   | |
+    # #   G-F
+    # N = (A ^ B-C-D) + E-F ^ G
+    # print('')
+    # print_connections(N)
+    # pprint(C.node.find_path(B.node))
+    # pprint(C.node.find_path(D.node))
+    # pprint(C.node.find_path(A.node))
+    # pprint(C.node.find_path(E.node))
+    # pprint(C.node.find_path(G.node))
+    # pprint(C.node.find_path(F.node))
+    # clear_connections(N)
+    #
+    # #   A
+    # #  /|\
+    # # C D E
+    # #  \|/
+    # #   B
+    # N = (A | B) * (C | D | E)
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # #   A
+    # #  /|\
+    # # B D F
+    # # | | |
+    # # C E G
+    # #  \|/
+    # #   H
+    # N = A-B-C + D-E + F-G % H
+    # print('')
+    # print_connections(N)
+    # clear_connections(N)
+    #
+    # #     A---H-I
+    # #    / \   \
+    # #   B   E   J
+    # #  /|  /|
+    # # C D F G
+    # N = A - (B-C + D) + (E-F + G) + (H-I + J)
+    # print('')
+    # print_connections(N)
+    # pprint(A.node.find_path(G.node))
+    # clear_connections(N)
